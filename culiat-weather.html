@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Culiat Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --white:      #ffffff;
+      --off-white:  #fdf6f9;
+      --blush:      #fce8f0;
+      --blush-mid:  #f9d4e5;
+      --pink:       #f0a0c0;
+      --pink-mid:   #e8749f;
+      --rose:       #d94f7e;
+      --rose-deep:  #b83568;
+      --petal:      #fef0f6;
+      --mist:       #f7f0f4;
+      --text-dark:  #2a1520;
+      --text-mid:   #7a4060;
+      --text-soft:  #c090a8;
+      --border:     #f0d0e0;
+      --shadow:     rgba(180, 60, 110, 0.08);
+      --shadow-md:  rgba(180, 60, 110, 0.14);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--off-white);
+      color: var(--text-dark);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND BLOBS ── */
+    .bg-blobs {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+      overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+    }
+    .blob-1 {
+      width: 500px; height: 500px;
+      background: var(--blush-mid);
+      top: -120px; right: -100px;
+      animation: blobdrift 14s ease-in-out infinite alternate;
+    }
+    .blob-2 {
+      width: 360px; height: 360px;
+      background: var(--pink);
+      bottom: 10%; left: -80px;
+      animation: blobdrift 18s ease-in-out infinite alternate-reverse;
+    }
+    .blob-3 {
+      width: 240px; height: 240px;
+      background: var(--blush);
+      top: 40%; right: 5%;
+      animation: blobdrift 11s ease-in-out infinite alternate;
+    }
+    @keyframes blobdrift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.08); }
+    }
+
+    /* ── PETAL PARTICLES ── */
+    .petals { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+    .petal {
+      position: absolute;
+      width: 8px; height: 8px;
+      background: var(--pink);
+      border-radius: 50% 0 50% 0;
+      opacity: 0;
+      animation: petalfall linear infinite;
+    }
+    @keyframes petalfall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+      10%  { opacity: 0.5; }
+      90%  { opacity: 0.3; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .page {
+      position: relative; z-index: 10;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      animation: fadein 0.8s ease both;
+    }
+    .header-eyebrow {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--pink-mid);
+      margin-bottom: 8px;
+    }
+    .header-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(32px, 7vw, 54px);
+      color: var(--text-dark);
+      line-height: 1.1;
+      letter-spacing: -1px;
+    }
+    .header-title em {
+      font-style: italic;
+      color: var(--rose);
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+    .header-line {
+      width: 60px; height: 2px;
+      background: linear-gradient(to right, var(--pink), var(--rose));
+      border-radius: 2px;
+      margin: 16px auto 0;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px var(--shadow);
+      animation: fadein 0.9s ease both;
+    }
+    .topbar-loc {
+      font-size: 13px;
+      color: var(--text-mid);
+      font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .topbar-loc::before {
+      content: '◎';
+      color: var(--rose);
+      font-size: 14px;
+    }
+    .topbar-time {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+    .topbar-badge {
+      background: var(--blush);
+      color: var(--rose);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── ADVISORY ── */
+    .advisory {
+      background: linear-gradient(135deg, var(--blush) 0%, var(--petal) 100%);
+      border: 1px solid var(--blush-mid);
+      border-left: 4px solid var(--rose);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 12px;
+      animation: fadein 1s ease both;
+    }
+    .advisory-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .advisory-title {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 4px;
+    }
+    .advisory-text {
+      font-size: 13px;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    /* ── HERO CARD ── */
+    .hero {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 24px var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      animation: fadein 1s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, var(--blush) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-left { display: flex; align-items: center; gap: 20px; }
+    .hero-icon-wrap {
+      width: 88px; height: 88px;
+      background: linear-gradient(135deg, var(--blush) 0%, var(--petal) 100%);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+      flex-shrink: 0;
+      animation: iconbob 3s ease-in-out infinite;
+      box-shadow: 0 4px 16px var(--shadow-md);
+    }
+    @keyframes iconbob {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50%       { transform: translateY(-6px) rotate(2deg); }
+    }
+    .hero-temp-block {}
+    .hero-temp {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(44px, 10vw, 68px);
+      color: var(--text-dark);
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+    .hero-feels {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+    .hero-feels span { color: var(--rose); font-weight: 500; }
+    .hero-desc {
+      font-family: 'DM Serif Display', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--rose);
+      margin-top: 2px;
+    }
+    .hero-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      min-width: 200px;
+    }
+    .stat-pill {
+      background: var(--petal);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .stat-pill-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 4px;
+    }
+    .stat-pill-val {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin: 24px 0 10px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    /* ── FORECAST STRIP ── */
+    .forecast-strip {
+      display: flex; gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: none;
+    }
+    .forecast-strip::-webkit-scrollbar { display: none; }
+    .fc-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      text-align: center;
+      min-width: 88px;
+      flex-shrink: 0;
+      transition: box-shadow 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .fc-card:hover {
+      box-shadow: 0 6px 20px var(--shadow-md);
+      transform: translateY(-3px);
+    }
+    .fc-card.today {
+      background: linear-gradient(135deg, var(--rose) 0%, var(--pink-mid) 100%);
+      border-color: transparent;
+    }
+    .fc-card.today .fc-day,
+    .fc-card.today .fc-hi,
+    .fc-card.today .fc-lo { color: white; }
+    .fc-day {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 8px;
+    }
+    .fc-icon { font-size: 26px; }
+    .fc-hi {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-dark);
+      margin-top: 6px;
+    }
+    .fc-lo {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 2px;
+    }
+
+    /* ── TWO-COL GRID ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── RAIN CHART ── */
+    .rain-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
+    .rain-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 64px;
+      margin-top: 14px;
+    }
+    .rain-bar-wrap { flex: 1; text-align: center; }
+    .rain-bar-val {
+      font-size: 9px;
+      color: var(--text-soft);
+      margin-bottom: 3px;
+    }
+    .rain-bar {
+      width: 100%;
+      background: linear-gradient(to top, var(--rose), var(--pink));
+      border-radius: 4px 4px 0 0;
+      min-height: 3px;
+      animation: barrise 1s ease-out both;
+      transform-origin: bottom;
+    }
+    @keyframes barrise {
+      from { transform: scaleY(0); opacity: 0; }
+      to   { transform: scaleY(1); opacity: 1; }
+    }
+    .rain-bar-label {
+      font-size: 8px;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+
+    /* ── WIND + UV ── */
+    .metric-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 2px 12px var(--shadow);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      gap: 10px;
+    }
+    .metric-title {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+    }
+    .compass-ring {
+      width: 76px; height: 76px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--petal);
+    }
+    .compass-n {
+      position: absolute; top: -18px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px; font-weight: 500;
+      color: var(--text-soft);
+    }
+    .compass-needle {
+      width: 3px; height: 32px;
+      background: linear-gradient(to bottom, var(--rose) 50%, var(--border) 50%);
+      border-radius: 3px;
+      transform-origin: bottom center;
+      position: absolute;
+      bottom: 50%;
+      left: calc(50% - 1.5px);
+      transition: transform 0.8s ease;
+    }
+    .compass-wind-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+
+    .uv-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 42px;
+      color: var(--rose);
+      line-height: 1;
+    }
+    .uv-lbl {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-mid);
+    }
+    .uv-track {
+      width: 100%;
+      height: 6px;
+      background: var(--blush);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .uv-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--pink), var(--rose));
+      border-radius: 6px;
+      animation: uvfill 1.2s ease both;
+      transform-origin: left;
+    }
+    @keyframes uvfill {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+
+    /* ── AREA GRID ── */
+    .area-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+    }
+    .area-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      transition: box-shadow 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .area-card:hover {
+      box-shadow: 0 6px 20px var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .area-name {
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .area-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .area-emoji { font-size: 28px; }
+    .area-temp {
+      font-family: 'DM Serif Display', serif;
+      font-size: 26px;
+      color: var(--text-dark);
+    }
+    .area-desc {
+      font-size: 11px;
+      color: var(--text-mid);
+      margin-top: 6px;
+    }
+    .area-hum {
+      font-size: 11px;
+      color: var(--pink-mid);
+      margin-top: 2px;
+    }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      position: fixed;
+      bottom: 0; left: 0; width: 100%;
+      z-index: 100;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 8px 0;
+      overflow: hidden;
+    }
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: tickerscroll 35s linear infinite;
+    }
+    .ticker-item {
+      font-size: 12px;
+      color: var(--text-mid);
+      padding: 0 20px;
+    }
+    .ticker-item span { color: var(--rose); font-weight: 500; }
+    @keyframes tickerscroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ── LAST UPDATED ── */
+    .last-updated {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-soft);
+      margin-top: 24px;
+      padding-bottom: 40px;
+    }
+    .last-updated span { color: var(--rose); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .stagger-1 { animation-delay: 0.05s; }
+    .stagger-2 { animation-delay: 0.1s; }
+    .stagger-3 { animation-delay: 0.15s; }
+    .stagger-4 { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+<div class="petals" id="petals"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-eyebrow">Live Weather · Quezon City</div>
+    <div class="header-title">Barangay <em>Culiat</em></div>
+    <div class="header-sub">Real-time conditions · Updates every 30 minutes</div>
+    <div class="header-line"></div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="topbar stagger-1">
+    <div class="topbar-loc">Culiat, Quezon City · Metro Manila</div>
+    <div class="topbar-time" id="datetime">—</div>
+    <div class="topbar-badge" id="statusBadge">⟳ Loading</div>
+  </div>
+
+  <!-- ADVISORY -->
+  <div class="advisory stagger-2">
+    <div class="advisory-icon">🌸</div>
+    <div>
+      <div class="advisory-title" id="advisoryTitle">Loading advisory...</div>
+      <div class="advisory-text" id="advisoryText">Fetching current conditions for Barangay Culiat...</div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero stagger-3">
+    <div class="hero-left">
+      <div class="hero-icon-wrap" id="heroIcon">⏳</div>
+      <div class="hero-temp-block">
+        <div class="hero-temp" id="heroTemp">—</div>
+        <div class="hero-feels">Feels like <span id="heroFeels">—</span></div>
+        <div class="hero-desc" id="heroDesc">Loading...</div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-pill">
+        <div class="stat-pill-label">Humidity</div>
+        <div class="stat-pill-val" id="statHumidity">—</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Pressure</div>
+        <div class="stat-pill-val" id="statPressure">—</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Wind</div>
+        <div class="stat-pill-val" id="statWind">—</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-label">Visibility</div>
+        <div class="stat-pill-val" id="statVis">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7-DAY FORECAST -->
+  <div class="section-label stagger-4">7-Day Forecast</div>
+  <div class="forecast-strip" id="forecastStrip">
+    <div style="font-size:13px;color:var(--text-soft);padding:10px;">Loading...</div>
+  </div>
+
+  <!-- RAIN + WIND/UV -->
+  <div class="section-label">Hourly Rain · Wind · UV</div>
+  <div class="two-col">
+    <div class="rain-card">
+      <div class="metric-title">Rain Probability (Next 8 hrs)</div>
+      <div class="rain-bars" id="rainBars">
+        <div style="font-size:12px;color:var(--text-soft);">Loading...</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="metric-card" style="flex:1;">
+        <div class="metric-title">Wind Direction</div>
+        <div class="compass-ring">
+          <span class="compass-n">N</span>
+          <div class="compass-needle" id="compassNeedle"></div>
+        </div>
+        <div class="compass-wind-label" id="windLabel">—</div>
+      </div>
+      <div class="metric-card" style="flex:1;">
+        <div class="metric-title">UV Index</div>
+        <div class="uv-num" id="uvVal">—</div>
+        <div class="uv-lbl" id="uvDesc">—</div>
+        <div class="uv-track"><div class="uv-fill" id="uvBar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AREAS -->
+  <div class="section-label">Conditions Around Culiat</div>
+  <div class="area-grid" id="areaGrid">
+    <div style="font-size:13px;color:var(--text-soft);padding:10px;grid-column:1/-1;">Fetching area data...</div>
+  </div>
+
+  <div class="last-updated" id="lastUpdated">Last updated: <span>—</span></div>
+
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="ticker">
+    <span class="ticker-item">Loading live weather data for Barangay Culiat...</span>
+  </div>
+</div>
+
+<script>
+  // ════════════════════════════════════════════
+  // CULIAT WEATHER — Live via Open-Meteo API
+  // Barangay Culiat, Quezon City
+  // Lat: 14.6520, Lon: 121.0610
+  // Refreshes every 30 minutes
+  // ════════════════════════════════════════════
+
+  const LAT = 14.6520;
+  const LON = 121.0610;
+  const REFRESH_MS = 30 * 60 * 1000;
+
+  const AREAS = [
+    { name: 'Culiat Main Ave',        lat: 14.6520, lon: 121.0610 },
+    { name: 'Tandang Sora Ave',       lat: 14.6580, lon: 121.0580 },
+    { name: 'Visayas Ave Jct',        lat: 14.6490, lon: 121.0530 },
+    { name: 'Teachers Village',       lat: 14.6540, lon: 121.0490 },
+    { name: 'Central Ave Area',       lat: 14.6460, lon: 121.0570 },
+    { name: 'Matandang Balara',       lat: 14.6620, lon: 121.0650 },
+    { name: 'Pansol Area',            lat: 14.6680, lon: 121.0590 },
+    { name: 'Batong Malake Side',     lat: 14.6440, lon: 121.0620 },
+    { name: 'Krus na Ligas',          lat: 14.6510, lon: 121.0470 },
+    { name: 'West Fairview Side',     lat: 14.6600, lon: 121.0520 },
+    { name: 'Litex Rd Approach',      lat: 14.6700, lon: 121.0680 },
+    { name: 'Culiat Creek Area',      lat: 14.6550, lon: 121.0640 },
+  ];
+
+  // ── WMO CODE ──
+  function wmoToWeather(code) {
+    if (code === 0)                    return { icon: '☀️',  desc: 'Clear Sky' };
+    if (code === 1)                    return { icon: '🌤️', desc: 'Mainly Clear' };
+    if (code === 2)                    return { icon: '⛅',  desc: 'Partly Cloudy' };
+    if (code === 3)                    return { icon: '☁️',  desc: 'Overcast' };
+    if ([45,48].includes(code))       return { icon: '🌫️', desc: 'Foggy' };
+    if ([51,53,55].includes(code))    return { icon: '🌦️', desc: 'Drizzle' };
+    if ([61,63,65].includes(code))    return { icon: '🌧️', desc: 'Rain' };
+    if ([80,81,82].includes(code))    return { icon: '🌦️', desc: 'Rain Showers' };
+    if ([95,96,99].includes(code))    return { icon: '⛈️', desc: 'Thunderstorm' };
+    return { icon: '🌡️', desc: 'Varied' };
+  }
+
+  function degToDir(d) {
+    return ['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];
+  }
+
+  function uvLabel(uv) {
+    if (uv <= 2)  return 'Low';
+    if (uv <= 5)  return 'Moderate';
+    if (uv <= 7)  return 'High';
+    if (uv <= 10) return 'Very High';
+    return 'Extreme';
+  }
+
+  function heatIndex(T, RH) {
+    if (T < 27) return T;
+    const HI = -8.78469475556 + 1.61139411*T + 2.33854883889*RH
+      - 0.14611605*T*RH - 0.012308094*T*T - 0.016424828*RH*RH
+      + 0.002211732*T*T*RH + 0.00072546*T*RH*RH - 0.000003582*T*T*RH*RH;
+    return Math.round(HI);
+  }
+
+  function advisory(hi) {
+    if (hi >= 52) return { title: '🔴 DANGER', text: 'Heat stroke highly likely. Avoid all outdoor activity and seek cool shelter immediately.' };
+    if (hi >= 42) return { title: '🟠 EXTREME CAUTION', text: `Heat index at ${hi}°C. Limit outdoor exposure between 10AM–3PM. Drink water frequently.` };
+    if (hi >= 33) return { title: '🟡 CAUTION', text: `Heat index at ${hi}°C. Rest in shade when possible. Keep hydrated throughout the day.` };
+    return { title: '🌸 COMFORTABLE', text: 'Conditions are pleasant in Culiat today. A good day to be outdoors — enjoy the weather!' };
+  }
+
+  function fmt12(iso) {
+    const d = new Date(iso);
+    let h = d.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ampm;
+  }
+
+  // ── PETALS ──
+  const petalsEl = document.getElementById('petals');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.width = p.style.height = (5 + Math.random() * 6) + 'px';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = Math.random() * 10 + 's';
+    p.style.opacity = 0;
+    petalsEl.appendChild(p);
+  }
+
+  // ── CLOCK ──
+  function updateTime() {
+    const now = new Date();
+    const D = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('datetime').textContent =
+      `${D[now.getDay()]}, ${now.getDate()} ${M[now.getMonth()]} ${now.getFullYear()} · ${hh}:${mm} PHT`;
+  }
+  updateTime();
+  setInterval(updateTime, 60000);
+
+  // ── BUILD TICKER ──
+  function buildTicker(d) {
+    const items = [
+      `☀️ Culiat Today: ${d.desc} — ${d.temp}°C`,
+      `💧 Humidity: ${d.humidity}%`,
+      `🌬️ Wind: ${d.wind}`,
+      `🌡️ Feels Like: ${d.feelsLike}°C`,
+      `🌤️ Tomorrow: ${d.tomorrowDesc} — ${d.tomorrowHi}°C`,
+      `☁️ UV Index: ${d.uv} — ${d.uvLbl}`,
+      `🌊 Pressure: ${d.pressure} hPa`,
+      `📍 Barangay Culiat, Quezon City`,
+      `🔄 Updated: ${new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})} PHT`,
+    ];
+    const ticker = document.getElementById('ticker');
+    ticker.innerHTML = '';
+    [...items, ...items].forEach(t => {
+      const el = document.createElement('span');
+      el.className = 'ticker-item';
+      el.innerHTML = `<span>✿</span> ${t} `;
+      ticker.appendChild(el);
+    });
+  }
+
+  // ── MAIN FETCH ──
+  async function fetchWeather() {
+    document.getElementById('statusBadge').textContent = '⟳ Updating';
+
+    const primaryURL =
+      `https://api.open-meteo.com/v1/forecast?` +
+      `latitude=${LAT}&longitude=${LON}` +
+      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,` +
+      `weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,visibility` +
+      `&hourly=precipitation_probability,uv_index` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&timezone=Asia%2FManila&forecast_days=7`;
+
+    const areaURLs = AREAS.map(a =>
+      `https://api.open-meteo.com/v1/forecast?` +
+      `latitude=${a.lat}&longitude=${a.lon}` +
+      `&current=temperature_2m,relative_humidity_2m,weather_code,apparent_temperature` +
+      `&timezone=Asia%2FManila`
+    );
+
+    try {
+      const [primary, ...areaResults] = await Promise.all([
+        fetch(primaryURL).then(r => r.json()),
+        ...areaURLs.map(u => fetch(u).then(r => r.json()))
+      ]);
+
+      const cur      = primary.current;
+      const temp     = Math.round(cur.temperature_2m);
+      const humidity = cur.relative_humidity_2m;
+      const feelsLike = heatIndex(temp, humidity);
+      const pressure = Math.round(cur.surface_pressure);
+      const windSpd  = Math.round(cur.wind_speed_10m);
+      const windDir  = degToDir(cur.wind_direction_10m);
+      const vis      = (cur.visibility / 1000).toFixed(1);
+      const { icon, desc } = wmoToWeather(cur.weather_code);
+
+      // Hourly
+      const now = new Date();
+      const hTimes = primary.hourly.time;
+      const hRain  = primary.hourly.precipitation_probability;
+      const hUV    = primary.hourly.uv_index;
+      const curH   = now.toISOString().slice(0,13);
+      let hIdx = hTimes.findIndex(t => t.startsWith(curH));
+      if (hIdx < 0) hIdx = 0;
+      const next8  = hTimes.slice(hIdx, hIdx+8).map((t,i) => ({ hr: fmt12(t), pct: hRain[hIdx+i]??0 }));
+      const uv     = Math.round(hUV[hIdx] ?? 0);
+      const uvLbl  = uvLabel(uv);
+      const uvPct  = Math.min(100, Math.round((uv/12)*100));
+
+      // Daily
+      const daily = primary.daily;
+      const DNAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const forecastDays = daily.time.map((t,i) => {
+        const d = new Date(t + 'T00:00:00+08:00');
+        return {
+          day:  i===0 ? 'Today' : DNAMES[d.getDay()],
+          icon: wmoToWeather(daily.weather_code[i]).icon,
+          desc: wmoToWeather(daily.weather_code[i]).desc,
+          hi:   Math.round(daily.temperature_2m_max[i]),
+          lo:   Math.round(daily.temperature_2m_min[i]),
+        };
+      });
+
+      // Advisory
+      const adv = advisory(feelsLike);
+      document.getElementById('advisoryTitle').textContent = adv.title;
+      document.getElementById('advisoryText').textContent  = adv.text;
+
+      // Hero
+      document.getElementById('heroIcon').textContent    = icon;
+      document.getElementById('heroTemp').textContent    = temp + '°C';
+      document.getElementById('heroFeels').textContent   = feelsLike + '°C';
+      document.getElementById('heroDesc').textContent    = desc;
+      document.getElementById('statHumidity').textContent = humidity + '%';
+      document.getElementById('statPressure').textContent = pressure + ' hPa';
+      document.getElementById('statWind').textContent    = `${windSpd} km/h ${windDir}`;
+      document.getElementById('statVis').textContent     = vis + ' km';
+
+      // UV
+      document.getElementById('uvVal').textContent  = uv;
+      document.getElementById('uvDesc').textContent = uvLbl;
+      document.getElementById('uvBar').style.width  = uvPct + '%';
+
+      // Wind compass
+      document.getElementById('windLabel').textContent = `${windDir} · ${windSpd} km/h`;
+      document.getElementById('compassNeedle').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
+
+      // Forecast
+      const strip = document.getElementById('forecastStrip');
+      strip.innerHTML = '';
+      forecastDays.forEach((f,i) => {
+        strip.innerHTML += `<div class="fc-card ${i===0?'today':''}">
+          <div class="fc-day">${f.day}</div>
+          <div class="fc-icon">${f.icon}</div>
+          <div class="fc-hi">${f.hi}°C</div>
+          <div class="fc-lo">${f.lo}°C</div>
+        </div>`;
+      });
+
+      // Rain bars
+      const maxH = 56;
+      const rainEl = document.getElementById('rainBars');
+      rainEl.innerHTML = '';
+      next8.forEach((r,i) => {
+        const h = Math.max(3, Math.round((r.pct/100)*maxH));
+        rainEl.innerHTML += `<div class="rain-bar-wrap">
+          <div class="rain-bar-val">${r.pct}%</div>
+          <div class="rain-bar" style="height:${h}px;animation-delay:${i*0.1}s;"></div>
+          <div class="rain-bar-label">${r.hr}</div>
+        </div>`;
+      });
+
+      // Areas
+      const grid = document.getElementById('areaGrid');
+      grid.innerHTML = '';
+      AREAS.forEach((area, i) => {
+        const ac = areaResults[i]?.current;
+        if (!ac) return;
+        const aTemp = Math.round(ac.temperature_2m);
+        const aHum  = ac.relative_humidity_2m;
+        const aHI   = heatIndex(aTemp, aHum);
+        const { icon: aIcon, desc: aDesc } = wmoToWeather(ac.weather_code);
+        grid.innerHTML += `<div class="area-card">
+          <div class="area-name">${area.name}</div>
+          <div class="area-row">
+            <span class="area-emoji">${aIcon}</span>
+            <span class="area-temp">${aTemp}°C</span>
+          </div>
+          <div class="area-desc">${aDesc}</div>
+          <div class="area-hum">${aHum}% humidity · ${aHI}°C HI</div>
+        </div>`;
+      });
+
+      // Ticker
+      buildTicker({ temp, feelsLike, humidity, pressure,
+        wind: `${windSpd} km/h ${windDir}`, uv, uvLbl, desc,
+        tomorrowHi: forecastDays[1]?.hi ?? '?',
+        tomorrowDesc: forecastDays[1]?.desc ?? '?' });
+
+      // Status
+      const t = new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('statusBadge').textContent = '✓ Live';
+      document.getElementById('lastUpdated').innerHTML = `Last updated: <span>${t} PHT</span>`;
+
+    } catch(err) {
+      console.error('[Culiat Weather]', err);
+      document.getElementById('statusBadge').textContent = '✕ Error';
+      document.getElementById('advisoryTitle').textContent = 'CONNECTION ERROR';
+      document.getElementById('advisoryText').textContent  = 'Could not load weather data. Check internet connection. Retrying in 30 minutes.';
+    }
+  }
+
+  fetchWeather();
+  setInterval(fetchWeather, REFRESH_MS);
+</script>
+</body>
+</html>
