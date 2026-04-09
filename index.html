@@ -811,6 +811,28 @@
     });
   }
 
+  // ── XHR HELPER (WebViewer-safe, no fetch()) ──
+  function xhrGet(url) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.timeout = 15000;
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try { resolve(JSON.parse(xhr.responseText)); }
+            catch(e) { reject(new Error('JSON parse error')); }
+          } else {
+            reject(new Error('HTTP ' + xhr.status));
+          }
+        }
+      };
+      xhr.ontimeout = function() { reject(new Error('Timeout')); };
+      xhr.onerror   = function() { reject(new Error('Network error')); };
+      xhr.send();
+    });
+  }
+
   // ── MAIN FETCH ──
   async function fetchWeather() {
     document.getElementById('statusBadge').textContent = '⟳ Updating';
@@ -824,18 +846,20 @@
       `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
       `&timezone=Asia%2FManila&forecast_days=7`;
 
-    const areaURLs = AREAS.map(a =>
-      `https://api.open-meteo.com/v1/forecast?` +
-      `latitude=${a.lat}&longitude=${a.lon}` +
-      `&current=temperature_2m,relative_humidity_2m,weather_code,apparent_temperature` +
-      `&timezone=Asia%2FManila`
-    );
-
     try {
-      const [primary, ...areaResults] = await Promise.all([
-        fetch(primaryURL).then(r => r.json()),
-        ...areaURLs.map(u => fetch(u).then(r => r.json()))
-      ]);
+      // Primary location fetch
+      const primary = await xhrGet(primaryURL);
+
+      // Area fetches — sequential to avoid overwhelming the WebViewer
+      const areaResults = [];
+      for (const a of AREAS) {
+        const url = `https://api.open-meteo.com/v1/forecast?` +
+          `latitude=${a.lat}&longitude=${a.lon}` +
+          `&current=temperature_2m,relative_humidity_2m,weather_code,apparent_temperature` +
+          `&timezone=Asia%2FManila`;
+        const result = await xhrGet(url);
+        areaResults.push(result);
+      }
 
       const cur      = primary.current;
       const temp     = Math.round(cur.temperature_2m);
